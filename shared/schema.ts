@@ -50,7 +50,7 @@ export interface MemoryProfile {
 }
 
 export interface BenchmarkRun {
-  benchmarkVersion: "v3";
+  benchmarkVersion: "v1";
   profile: BenchmarkProfile;
   engine: Engine;
   renderer: Renderer;
