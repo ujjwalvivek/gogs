@@ -1,0 +1,17 @@
+{
+  "journey": {
+    "wasmRawBytes": 3062472,
+    "wasmGzipBytes": 1460283,
+    "wasmBrotliBytes": 1201541,
+    "jsGlueRawBytes": 98780,
+    "jsGlueGzipBytes": 17606,
+    "jsGlueBrotliBytes": 14834,
+    "totalTransferGzipBytes": 1477889,
+    "totalTransferBrotliBytes": 1216375
+  },
+  "tinyts": {
+    "bundleRawBytes": 129466,
+    "bundleGzipBytes": 37252,
+    "bundleBrotliBytes": 31976
+  }
+}
