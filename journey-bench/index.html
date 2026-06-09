@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <title>Journey Engine</title>
+        <style>
+            body {
+                background-color: #0b0c10;
+                color: #c5c6c7;
+                font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+                margin: 0;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                min-height: 100vh;
+            }
+            #canvas-container {
+                position: relative;
+                width: 640px;
+                height: 360px;
+                border: 2px solid #1f2833;
+                background-color: #151a22;
+                overflow: hidden;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            }
+            canvas {
+                width: 100%;
+                height: 100%;
+                display: block;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="canvas-container"><canvas id="canvas"></canvas></div>
+        <script type="module">
+            import init, {
+                set_load_profile,
+                start_benchmark,
+            } from "./pkg/journey_bench.js";
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const forcedRenderer = urlParams.get("renderer");
+            const forceWebGL2 = forcedRenderer === "webgl2";
+            const statusText = document.getElementById("status-text");
+            const progressBar = document.getElementById("progress-bar");
+
+            if (forceWebGL2) {
+                try {
+                    Object.defineProperty(navigator, "gpu", {
+                        get() {
+                            return undefined;
+                        },
+                    });
+                } catch (e) {
+                    console.error(
+                        "Failed to force WebGL2 via navigator.gpu override:",
+                        e,
+                    );
+                }
+            }
+
+            async function initJourneyWasm() {
+                const wasmUrl = new URL(
+                    "./pkg/journey_bench_bg.wasm",
+                    import.meta.url,
+                );
+
+                const fetchStart = performance.now();
+                const response = await fetch(wasmUrl);
+                if (!response.ok) {
+                    throw new Error(
+                        `Failed to fetch ${wasmUrl}: ${response.status} ${response.statusText}`,
+                    );
+                }
+                const bytes = await response.arrayBuffer();
+                const fetchEnd = performance.now();
+
+                const compileStart = performance.now();
+                const module = await WebAssembly.compile(bytes);
+                const compileEnd = performance.now();
+
+                const instantiateStart = performance.now();
+                await init({ module_or_path: module });
+                const instantiateEnd = performance.now();
+
+                set_load_profile(
+                    fetchEnd - fetchStart,
+                    compileEnd - compileStart,
+                    instantiateEnd - instantiateStart,
+                );
+            }
+
+            async function run() {
+                if (statusText) {
+                    statusText.innerText =
+                        "Initializing WASM and wGPU/WebGL2...";
+                }
+                try {
+                    await initJourneyWasm();
+                    if (statusText) {
+                        statusText.innerText =
+                            "Running benchmark conditions...";
+                    }
+                    if (progressBar) progressBar.style.width = "10%";
+                    window.addEventListener("journey_wasm_ready", () => {
+                        if (statusText) {
+                            statusText.innerText =
+                                "Journey ready and running...";
+                        }
+                    });
+                    start_benchmark();
+                } catch (err) {
+                    console.error("Benchmark failed to run:", err);
+                    if (statusText) statusText.innerText = "Error: " + err;
+                }
+            }
+
+            window.addEventListener("message", (e) => {
+                if (e.data?.type === "BENCH_START") {
+                    run();
+                }
+            });
+
+            window.addEventListener("message", (e) => {
+                if (e.data?.type === "BENCH_PROGRESS") {
+                    const pct = Math.round(
+                        (e.data.conditionIndex / e.data.totalConditions) * 100,
+                    );
+                    if (progressBar) progressBar.style.width = `${pct}%`;
+                    if (statusText) {
+                        statusText.innerText = `Condition ${e.data.conditionIndex}/${e.data.totalConditions}: ${e.data.currentCondition} (${e.data.framesCollected} frames)`;
+                    }
+                    if (window.opener) {
+                        window.opener.postMessage(e.data, "*");
+                    }
+                } else if (e.data?.type === "BENCH_COMPLETE") {
+                    if (progressBar) progressBar.style.width = "100%";
+                    if (statusText) {
+                        statusText.innerText = "Benchmark complete! Data sent.";
+                    }
+                    if (window.opener) {
+                        window.opener.postMessage(e.data, "*");
+                    }
+                }
+            });
+
+            if (!window.opener) {
+                run();
+            } else {
+                window.opener.postMessage(
+                    { type: "BENCH_LOADED", engine: "journey" },
+                    "*",
+                );
+                if (statusText) {
+                    statusText.innerText =
+                        "Waiting for BENCH_START signal from harness...";
+                }
+            }
+        </script>
+    </body>
+</html>

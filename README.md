@@ -34,7 +34,7 @@ npm run dev
 ### Harness
 
 ```bash
-cd harness
+cd bench-data
 npm install
 npm run dev
 ```
@@ -53,6 +53,46 @@ npm run dev
   → posts BenchmarkRun to harness opener via postMessage
   → harness renders all graphs
 ```
+
+---
+
+## Bundle & Load Analysis
+
+### Binary / Bundle Size
+
+| Metric              | Journey    | TinyTS    |
+| ------------------- | ---------- | --------- |
+| Raw WASM binary     | 2990.69 KB | N/A       |
+| JS glue code        | 96.47 KB   | N/A       |
+| npm bundle minified | N/A        | 126.43 KB |
+| npm bundle gzip     | N/A        | 36.38 KB  |
+| npm bundle brotli   | N/A        | 31.23 KB  |
+| Total transfer size | 1443.25 KB | 36.38 KB  |
+
+---
+
+### Load Performance - Mostly Incomplete Data
+
+| Metric                | Journey   | TinyTS                      |
+| --------------------- | --------- | --------------------------- |
+| WASM fetch time       | 30.79 ms  | N/A                         |
+| WASM compile time     | 2.50 ms   | N/A                         |
+| WASM instantiate time | 1.55 ms   | N/A                         |
+| JS parse + execute    | N/A       | `PerformanceResourceTiming` |
+| Time to first frame   | 2005.8 ms | 2544.8 ms                   |
+| Time to interactive   | N/A       | N/A                         |
+
+---
+
+### Runtime Memory
+
+| Metric                     | Journey  | TinyTS    |
+| -------------------------- | -------- | --------- |
+| WASM linear memory initial | 66.58 MB | N/A       |
+| WASM linear memory at 65k  | 67.12 MB | N/A       |
+| JS heap at idle            | 66.58 MB | 7.72 MB   |
+| JS heap at 65k entities    | 67.12 MB | 33.87 MB  |
+| JS heap after stop         | 50.16 MB | 115.12 MB |
 
 ---
 
