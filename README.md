@@ -152,3 +152,29 @@ The current smoke output validates automation and export shape only.Before anyth
 - separate JS heap and WASM linear-memory charts
 - production-build load timing with cache mode recorded
 - raw JSON retained for frame-level analysis
+
+### Unified Timing
+
+- Record wall-clock time (`wallStartMs`/`wallEndMs`) for update/render work in both engines
+- Store `frameDeltaMs` (pacing) and `workDurationMs` (cost) separately per frame
+- Add run metadata: refresh rate, RAF cadence, visibility, renderer backend, throttling status
+- Charts should explicitly choose pacing or work-duration metrics
+
+### Memory Channels
+
+- Split into separate fields: `jsHeapUsedBytes`, `wasmLinearMemoryBytes`, `benchmarkHostBytes`
+- Sample at: idle, post-warmup, peak, stop, and post-stop settle
+- Don't combine WASM and JS heap unless label explicitly states "combined footprint"
+
+### Load Profile
+
+- Time separately: fetch, compile, instantiate, JS import, first frame, interactive readiness
+- Record cache mode (cold/warm/unknown)
+- Measure from production builds, not dev servers
+
+### Workload Scaling
+
+- Maintain V2 comparable/probe separation
+- Expand counts only after unified timing lands
+- Add CPU counters: particles updated, grid cells touched, overlap tests, draw calls, batch flushes, audio voices, ECS operations
+- Chart `workDurationMs` and operation counts for CPU-only probes
