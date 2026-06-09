@@ -871,7 +871,7 @@
                     border-right: none;
                 }
             }
-        
+
             #app-loading {
                 position: fixed;
                 inset: 0;
@@ -885,12 +885,12 @@
                 transition: opacity 0.5s ease;
                 pointer-events: all;
             }
-            
+
             #app-loading.hide {
                 opacity: 0;
                 pointer-events: none;
             }
-            
+
             #app-loading h1 {
                 font-size: 1.8rem;
                 font-weight: 500;
@@ -898,7 +898,7 @@
                 letter-spacing: 0.4em;
                 text-transform: lowercase;
             }
-            
+
             #app-loading .load-bar {
                 margin-top: 1.2rem;
                 width: 120px;
@@ -908,7 +908,7 @@
                 overflow: hidden;
                 position: relative;
             }
-            
+
             #app-loading .load-bar::after {
                 content: "";
                 position: absolute;
@@ -918,7 +918,7 @@
                 border-radius: 2px;
                 animation: load-sweep 1.2s ease-in-out infinite;
             }
-            
+
             @keyframes load-sweep {
                 0% {
                     left: -40%;
@@ -1069,7 +1069,10 @@
         </section>
         <aside class="button-sidebar panel">
             <div class="controls-panel">
-                <button class="btn btn-secondary" id="btn-run-smoke">
+                <button
+                    class="btn btn-secondary"
+                    onclick="runAutomation(false, 'smoke')"
+                >
                     <span class="btn-icon"
                         ><svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -1085,7 +1088,10 @@
                     ></span>
                     <span class="btn-text">Smoke Test</span>
                 </button>
-                <button class="btn btn-primary" id="btn-run-best">
+                <button
+                    class="btn btn-primary"
+                    onclick="runAutomation(false, 'standard')"
+                >
                     <span class="btn-icon"
                         ><svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -1101,7 +1107,10 @@
                     ></span>
                     <span class="btn-text">Standard (WEBGPU)</span>
                 </button>
-                <button class="btn btn-secondary" id="btn-run-webgl2">
+                <button
+                    class="btn btn-secondary"
+                    onclick="runAutomation(true, 'standard')"
+                >
                     <span class="btn-icon"
                         ><svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -1117,7 +1126,10 @@
                     ></span>
                     <span class="btn-text">Standard (WebGL2)</span>
                 </button>
-                <button class="btn btn-secondary" id="btn-run-full">
+                <button
+                    class="btn btn-secondary"
+                    onclick="runAutomation(false, 'full')"
+                >
                     <span class="btn-icon"
                         ><svg
                             xmlns="http://www.w3.org/2000/svg"

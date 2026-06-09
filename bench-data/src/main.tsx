@@ -7,7 +7,6 @@ import {
 } from "../../shared/schema";
 import { FAVICON_DATA, FONT_DATA } from "./assets";
 
-
 interface State {
   journeyRun: BenchmarkRun | null;
   tinytsRun: BenchmarkRun | null;
@@ -226,17 +225,10 @@ async function runAutomation(
   const progressBar = document.getElementById("status-progress");
   const pctLabel = document.getElementById("status-pct");
 
-  if (statusBanner) statusBanner.style.display = "flex";
-
   const params = new URLSearchParams();
   params.set("profile", profile);
   if (forceWebGL2) params.set("renderer", "webgl2");
   const urlSuffix = `?${params.toString()}`;
-
-  if (statusText)
-    statusText.textContent = "Launching Journey benchmark window...";
-  if (progressBar) progressBar.style.width = "2%";
-  if (pctLabel) pctLabel.innerText = "2%";
 
   const journeyWin = window.open(
     `/journey-bench/index.html${urlSuffix}`,
@@ -250,8 +242,16 @@ async function runAutomation(
     `${benchmarkWindowFeatures},left=820`,
   );
 
+  if (statusBanner) statusBanner.style.display = "flex";
+  if (statusText)
+    statusText.textContent = "Launching Journey benchmark window...";
+  if (progressBar) progressBar.style.width = "2%";
+  if (pctLabel) pctLabel.innerText = "2%";
+
   const tinytsLoadedPromise = waitForMessage(
-    tinytsWin, "BENCH_LOADED", 300000,
+    tinytsWin,
+    "BENCH_LOADED",
+    300000,
     (d) => d.engine === "tinyts",
   );
 
@@ -266,14 +266,19 @@ async function runAutomation(
   window.addEventListener("message", journeyErrorHandler);
 
   const journeyLoaded = await waitForMessage(
-    journeyWin, "BENCH_LOADED", 30000,
+    journeyWin,
+    "BENCH_LOADED",
+    30000,
     (d) => d.engine === "journey",
   );
   if (!journeyLoaded) {
     journeyErrorCleanup();
     if (statusText) statusText.textContent = "Journey window failed to load.";
     tinytsWin?.close();
-    if (statusBanner) setTimeout(() => { statusBanner.style.display = "none"; }, 3000);
+    if (statusBanner)
+      setTimeout(() => {
+        statusBanner.style.display = "none";
+      }, 3000);
     return;
   }
   journeyErrorCleanup();
@@ -313,8 +318,7 @@ async function runAutomation(
   window.removeEventListener("message", progressHandler);
   journeyWin?.close();
 
-  if (statusText)
-    statusText.textContent = "Waiting for TinyTS to load...";
+  if (statusText) statusText.textContent = "Waiting for TinyTS to load...";
   if (progressBar) progressBar.style.width = "52%";
   if (pctLabel) pctLabel.innerText = "52%";
 
@@ -354,8 +358,7 @@ async function runAutomation(
 
   const tCompleteMsg = await waitForMessage(tinytsWin, "BENCH_COMPLETE", 0);
   if (!tCompleteMsg) {
-    if (statusText)
-      statusText.textContent = "TinyTS benchmark timed out.";
+    if (statusText) statusText.textContent = "TinyTS benchmark timed out.";
     window.removeEventListener("message", tProgressHandler);
     tinytsWin?.close();
     if (journeyData) loadRunData("journey", journeyData);
@@ -1587,12 +1590,13 @@ function handleRawJsonExport() {
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
-  const faviconLink = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+  const faviconLink =
+    document.querySelector<HTMLLinkElement>('link[rel="icon"]');
   if (faviconLink) faviconLink.href = FAVICON_DATA;
 
   const fontStyle = document.createElement("style");
-    fontStyle.textContent = `@font-face { font-family: "TinyTS"; src: url(${FONT_DATA}); font-weight: 400; font-style: normal; font-display: block; }`;
-    document.head.appendChild(fontStyle);
+  fontStyle.textContent = `@font-face { font-family: "TinyTS"; src: url(${FONT_DATA}); font-weight: 400; font-style: normal; font-display: block; }`;
+  document.head.appendChild(fontStyle);
 
   const urlParams = new URLSearchParams(window.location.search);
   const sharedId = urlParams.get("id");
@@ -1683,19 +1687,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupFileUpload("upload-json");
 
   document
-    .getElementById("btn-run-smoke")
-    ?.addEventListener("click", () => runAutomation(false, "smoke"));
-  document
-    .getElementById("btn-run-best")
-    ?.addEventListener("click", () => runAutomation(false, "standard"));
-  document
-    .getElementById("btn-run-webgl2")
-    ?.addEventListener("click", () => runAutomation(true, "standard"));
-  document
-    .getElementById("btn-run-full")
-    ?.addEventListener("click", () => runAutomation(false, "full"));
-
-  document
     .getElementById("btn-export")
     ?.addEventListener("click", handleCsvExport);
   document
@@ -1706,4 +1697,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     const el = document.getElementById("app-loading");
     if (el) el.classList.add("hide");
   });
+
+  (window as any).runAutomation = runAutomation;
 });
