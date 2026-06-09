@@ -1,0 +1,1499 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <title>gogs | a game of games</title>
+        <link rel="icon" href="" />
+        <style>
+            :root {
+                --bg-color: #1a1b26;
+                --panel-bg: #16161e;
+                --panel-border: #414868;
+                --primary: #7aa2f7;
+                --secondary: #e0af68;
+                --accent: #bb9af7;
+                --danger: #f7768e;
+                --text-main: #c0caf5;
+                --text-muted: #9aa5ce;
+                --success: #9ece6a;
+                --warning: #e0af68;
+                --font-display: "TinyTS";
+                --font-mono: "TinyTS";
+                --font-body: "TinyTS";
+            }
+
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+
+            html,
+            body {
+                width: 100%;
+                min-height: 100%;
+                height: 100%;
+                margin: 0;
+                overflow: hidden;
+            }
+
+            body {
+                background-color: var(--bg-color);
+                background-attachment: fixed;
+                color: var(--text-main);
+                font-family: var(--font-body);
+                min-height: 100%;
+                overflow-x: hidden;
+                line-height: 1.5;
+                display: grid;
+                grid-template-rows: 30px 1fr 22px;
+                font-size: 0.65rem;
+            }
+
+            header {
+                position: relative;
+                height: 2rem;
+                min-height: 2rem;
+                padding: 0 1rem;
+                display: grid;
+                grid-template-columns: 120px 1fr 120px;
+                align-items: center;
+                background: var(--panel-bg);
+                border-bottom: 2px solid var(--panel-border);
+            }
+
+            .window-controls {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+            }
+
+            .window-dot {
+                width: 0.6rem;
+                height: 0.6rem;
+                border: 2px solid #0f1018;
+                box-shadow: 1px 1px 0 #0f1018;
+            }
+
+            .window-dot.close {
+                background: #f7768e;
+            }
+            .window-dot.minimize {
+                background: #e0af68;
+            }
+            .window-dot.zoom {
+                background: #9ece6a;
+            }
+
+            .window-title {
+                color: #c0caf5;
+                font-family: var(--font-display);
+                font-size: 0.78rem;
+                text-align: center;
+                text-transform: uppercase;
+                letter-spacing: 0;
+            }
+
+            .controls-panel {
+                display: flex;
+                gap: 1rem;
+                flex-direction: column;
+                align-items: stretch;
+                justify-content: flex-start;
+            }
+
+            .btn {
+                font-family: var(--font-display);
+            }
+
+            .file-upload-wrapper {
+                position: relative;
+            }
+            .file-upload-wrapper input[type="file"] {
+                position: absolute;
+                left: 0;
+                top: 0;
+                opacity: 0;
+                width: 100%;
+                height: 100%;
+                cursor: pointer;
+            }
+
+            .status-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            .status-title {
+                font-weight: 600;
+                color: var(--primary);
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+
+            .status-percentage {
+                font-family: var(--font-mono);
+                font-size: 0.765rem;
+            }
+
+            .status-bar-outer {
+                height: 14px;
+                background: #0d0d12;
+                border: 2px solid #4f4f5c;
+                width: 100%;
+                overflow: hidden;
+            }
+
+            .status-bar-inner {
+                background: var(--primary);
+                box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.35);
+                height: 100%;
+                width: 0%;
+                transition: width 0.3s ease;
+            }
+
+            .tab-btn {
+                padding: 10px 20px;
+                font-family: var(--font-display);
+                font-size: 0.8075rem;
+                font-weight: 600;
+                color: var(--text-muted);
+                background: transparent;
+                border: none;
+                cursor: pointer;
+                transition: all 0.2s ease;
+            }
+
+            .tab-btn:hover {
+                color: var(--text-main);
+            }
+
+            .tab-btn.active {
+                color: #080b11;
+                background: var(--primary);
+                box-shadow: 3px 3px 0 #000;
+            }
+
+            .tab-panel {
+                display: none;
+                flex-direction: column;
+                gap: 24px;
+                animation: fadeIn 0.4s ease-out;
+            }
+
+            .tab-panel.active {
+                display: flex;
+            }
+
+            @keyframes fadeIn {
+                from {
+                    opacity: 0;
+                    transform: translateY(8px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+
+            .sub-controls {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                background: rgba(255, 255, 255, 0.02);
+                border: 2px solid var(--panel-border);
+                padding: 8px;
+                flex-wrap: wrap;
+                gap: 16px;
+                min-height: 0;
+            }
+
+            .sub-tab-nav {
+                display: flex;
+                gap: 8px;
+                flex-wrap: wrap;
+            }
+
+            .sub-tab-btn {
+                font-family: var(--font-display);
+                font-weight: 600;
+                color: var(--text-muted);
+                background: rgba(255, 255, 255, 0.03);
+                border: 2px solid var(--panel-border);
+                cursor: pointer;
+                transition: all 0.2s;
+                min-height: 32px;
+                padding: 8px 10px;
+                line-height: 1.2;
+            }
+
+            .sub-tab-btn:hover {
+                color: var(--text-main);
+                border-color: #7aa2f7;
+            }
+
+            .sub-tab-btn.active {
+                color: var(--primary);
+                background: #7aa2f7;
+                border-color: #9abdf5;
+            }
+
+            .select-wrapper {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                justify-content: flex-end;
+                margin-left: auto;
+            }
+
+            .select-wrapper label {
+                font-size: 0.7225rem;
+                color: var(--text-muted);
+                line-height: 1.35;
+            }
+
+            .select-input {
+                background: #0d0d12;
+                border: 2px solid var(--panel-border);
+                color: var(--text-main);
+                padding: 6px 12px;
+                font-family: var(--font-body);
+                outline: none;
+                cursor: pointer;
+                min-width: 150px;
+            }
+
+            .select-input:focus {
+                border-color: var(--primary);
+            }
+
+            .sub-tab-btn,
+            .select-input {
+                min-height: 24px;
+                font-size: 0.6rem;
+            }
+
+            .tab-nav {
+                background: #0d0d0d;
+                width: 100%;
+                flex-wrap: wrap;
+                min-height: 0;
+                gap: 8px;
+                padding: 8px;
+                border: 2px solid var(--panel-border);
+                align-items: center;
+                margin-bottom: 1rem;
+            }
+
+            .tab-btn {
+                color: var(--text-muted);
+                background: #24283b;
+                border: 2px solid var(--panel-border);
+                margin: 2px;
+                flex: 1 1 150px;
+                padding: 9px 12px;
+                color: #9aa5ce;
+                font-size: 0.68rem;
+                line-height: 1.2;
+            }
+
+            .tab-btn.active,
+            .sub-tab-btn.active {
+                color: #dce7ff;
+                background: #283c63;
+                border-color: #7aa2f7;
+                box-shadow: inset 0 -2px 0 #7aa2f7;
+            }
+
+            .tab-btn:hover {
+                color: #c0caf5;
+                background: #202438;
+                border-color: #7aa2f7;
+                box-shadow: inset 0 -2px 0 #7aa2f7;
+                transition: all 0.2s ease-in-out;
+            }
+
+            .btn,
+            .tab-btn,
+            .sub-tab-btn,
+            .select-input {
+                transition: none;
+                text-transform: uppercase;
+                letter-spacing: 0;
+            }
+
+            #status-banner,
+            .panel,
+            .sub-controls,
+            .chart-card,
+            .stat-card,
+            .tab-nav,
+            .info-callout {
+                backdrop-filter: none;
+                -webkit-backdrop-filter: none;
+                box-shadow: 4px 4px 0 #0d0d12;
+                background: var(--panel-bg);
+                border-color: var(--panel-border);
+                position: relative;
+            }
+
+            .stat-card.journey .stat-num {
+                color: var(--accent);
+            }
+
+            .chart-card::before,
+            .stat-card::before {
+                content: "";
+                position: absolute;
+                top: 9px;
+                left: 10px;
+                width: 7px;
+                height: 7px;
+                background: #f7768e;
+                box-shadow:
+                    13px 0 0 #e0af68,
+                    26px 0 0 #9ece6a;
+                z-index: 2;
+            }
+
+            .stat-card {
+                border: 2px solid var(--panel-border);
+                text-align: center;
+                padding-top: 1.5rem;
+                min-height: 68px;
+                background: var(--panel-bg);
+            }
+
+            .chart-card::before {
+                top: 12px;
+            }
+
+            .chart-card {
+                grid-column: span 6;
+                min-height: 430px;
+                padding: 0;
+                border: 2px solid var(--panel-border);
+                background: #16161e;
+                display: grid;
+                grid-template-rows: 34px minmax(0, 1fr);
+            }
+
+            .chart-card.full-width {
+                grid-column: 1 / -1;
+                min-height: 390px;
+            }
+
+            .chart-title {
+                min-height: 34px;
+                padding: 8px 10px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 12px;
+                background: #1f2335;
+                border-bottom: 2px solid var(--panel-border);
+                color: var(--text-main);
+                font-size: 0.66rem;
+                line-height: 1;
+                letter-spacing: 0;
+            }
+
+            .chart-title span {
+                color: var(--text-muted);
+                font-size: 0.5rem;
+                line-height: 1;
+                text-align: left;
+                flex: 1;
+                display: flex;
+                align-items: center;
+                justify-content: flex-end;
+            }
+
+            canvas {
+                image-rendering: pixelated;
+            }
+
+            .chart-canvas-holder {
+                height: auto;
+                min-height: 0;
+                padding: 12px 14px 14px;
+            }
+
+            .chart-canvas-holder p {
+                line-height: 2;
+                margin-bottom: 1rem;
+            }
+
+            .chart-card.full-width .chart-canvas-holder {
+                height: auto;
+            }
+
+            .chart-title {
+                padding-left: 3.5rem;
+            }
+
+            .chart-grid {
+                display: grid;
+                grid-template-columns: repeat(12, minmax(0, 1fr));
+                gap: 1rem;
+            }
+
+            .summary-stats-grid {
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 1rem;
+            }
+
+            .stat-num {
+                font-size: 1.05rem;
+                font-weight: 700;
+                font-family: var(--font-mono);
+                color: var(--primary);
+                margin: 5px 0;
+            }
+
+            .stat-label {
+                font-size: 0.6375rem;
+                text-transform: uppercase;
+                color: var(--text-muted);
+                letter-spacing: 0.5px;
+                background: #1f2335;
+                width: 100%;
+                top: 0;
+                position: absolute;
+                height: 1.6rem;
+                text-align: center;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+            }
+
+            .landing-panel {
+                width: 100%;
+                max-width: none;
+                min-height: calc(100vh - 5rem);
+                margin: 0;
+                padding: 26px;
+                display: flex;
+                flex-direction: column;
+                align-items: start;
+                gap: 24px;
+                border-width: 2px;
+            }
+
+            .landing-title {
+                font-size: 1.2rem;
+                margin-bottom: 1rem;
+                color: var(--accent);
+            }
+
+            .landing-subtitle {
+                font-size: 0.9rem;
+                color: var(--secondary);
+                line-height: 1.4;
+                margin: 1rem auto;
+            }
+
+            .landing-copy {
+                color: var(--text-main);
+                line-height: 2;
+                font-size: 0.75rem;
+                margin-bottom: 2rem;
+            }
+
+            .landing-content {
+                min-height: 0;
+                height: 100%;
+                display: grid;
+                grid-template-rows: minmax(0, 1fr) auto;
+                box-sizing: border-box;
+                min-height: 0;
+                overflow: hidden;
+            }
+
+            #status-banner {
+                padding: 16px 24px;
+                background: var(--panel-bg);
+                border: 3px solid var(--panel-border);
+                display: none;
+                flex-direction: column;
+                justify-content: flex-end;
+                gap: 10px;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+                position: relative;
+                align-self: end;
+                margin: 0;
+            }
+
+            .app-status-bar {
+                position: fixed;
+                bottom: 0;
+                width: 100%;
+                height: 1.75rem;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 1rem;
+                padding: 0 1rem;
+                background: #16161e;
+                border-top: 2px solid #292e42;
+                color: var(--text-muted);
+                font-family: var(--font-mono);
+                font-size: 0.52rem;
+                text-transform: uppercase;
+                z-index: 120;
+            }
+
+            .app-status-bar strong {
+                color: var(--primary);
+                cursor: default;
+            }
+
+            .app-status-bar a {
+                color: var(--accent);
+                text-decoration: none;
+                cursor: pointer;
+            }
+
+            .githubLinks {
+                display: flex;
+                align-items: center;
+                gap: 0.8rem;
+                min-width: 0;
+            }
+
+            .githubLinks a {
+                display: inline-flex;
+                align-items: center;
+                height: 100%;
+                gap: 0.4rem;
+                color: var(--accent);
+                line-height: 1;
+                white-space: nowrap;
+            }
+
+            .githubIcon {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 0.8rem;
+                line-height: 1;
+                transform: translateY(-1px);
+            }
+
+            .githubIcon svg {
+                display: block;
+            }
+
+            .btn {
+                display: grid;
+                grid-template-columns: 1rem minmax(0, 1fr);
+                align-items: center;
+                justify-content: stretch;
+                text-align: left;
+                line-height: 1;
+                min-height: 2rem;
+                gap: 1rem;
+                padding: 9px 12px;
+                font-size: 0.7rem;
+                border: 2px solid var(--panel-border);
+                background: #24283b;
+                color: var(--text-main);
+                box-shadow: 4px 4px 0 #0d0d12;
+            }
+
+            .btn .btn-icon {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: 1.05em;
+                height: 1.05em;
+                flex: 0 0 1.05em;
+            }
+
+            .btn .btn-text {
+                display: block;
+                min-width: 0;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+            .btn-primary {
+                background: #1f3b61;
+                color: var(--text-main);
+                border-color: var(--primary);
+            }
+
+            .btn-secondary {
+                background: #2f2f38;
+                color: var(--text-main);
+                border-color: #62626e;
+            }
+
+            .btn-accent {
+                background: #25252d;
+                color: var(--accent);
+                border-color: var(--accent);
+            }
+
+            .controls-panel .btn,
+            .file-upload-wrapper,
+            .file-upload-wrapper .btn {
+                width: 100%;
+            }
+
+            .file-upload-wrapper:hover .btn:not(:disabled) {
+                cursor: pointer;
+                transform: translate(1px, 1px);
+                box-shadow:
+                    inset 2px 2px 0 rgba(229, 229, 236, 0.16),
+                    inset -2px -2px 0 #0d0d12,
+                    4px 4px 0 #0d0d12;
+            }
+
+            .file-upload-wrapper:hover .btn-secondary:not(:disabled) {
+                background: #42424c;
+            }
+
+            .file-upload-wrapper {
+                position: relative;
+            }
+
+            .btn:hover:not(:disabled) {
+                cursor: pointer;
+                transform: translate(1px, 1px);
+                box-shadow:
+                    inset 2px 2px 0 rgba(229, 229, 236, 0.16),
+                    inset -2px -2px 0 #0d0d12,
+                    4px 4px 0 #0d0d12;
+            }
+
+            .btn-secondary:hover:not(:disabled) {
+                background: #42424c;
+            }
+
+            .btn-primary:hover:not(:disabled) {
+                background: var(--primary);
+                color: var(--bg-color);
+            }
+
+            .btn-accent:hover:not(:disabled) {
+                background: var(--accent);
+                color: var(--bg-color);
+            }
+
+            .btn:disabled,
+            .btn:disabled:hover {
+                cursor: not-allowed;
+                transform: none;
+                box-shadow: none;
+            }
+
+            .btn-accent:disabled,
+            .btn-accent:disabled:hover {
+                background: #25252d;
+                color: var(--text-muted);
+            }
+
+            .workspace {
+                display: grid;
+                grid-template-columns: 300px minmax(0, 1fr);
+                gap: 0;
+                width: 100%;
+                max-width: none;
+                height: calc(100vh - 3.5rem);
+                min-height: 0;
+                margin: 0;
+                padding: 0;
+                overflow: hidden;
+            }
+
+            .dashboard-content {
+                min-width: 0;
+                overflow-y: auto;
+                overflow-x: hidden;
+                padding: 1rem;
+            }
+
+            .button-sidebar {
+                position: static;
+                width: auto;
+                margin: 0;
+                padding: 0 0 1rem;
+                box-shadow: none;
+                padding-bottom: 1rem;
+            }
+
+            .sidebar {
+                position: static;
+                width: auto;
+                height: 100%;
+                overflow-y: auto;
+                display: flex;
+                flex-direction: column;
+                border-right: 2px solid var(--panel-border);
+                gap: 1.5rem;
+                padding: 1rem;
+            }
+
+            .sidebar h3 {
+                background: var(--secondary);
+                border: 3px solid var(--panel-border);
+                color: var(--bg-color);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                line-height: 1;
+                padding: 0.4rem 0.8rem;
+                font-size: 0.7rem;
+                margin: 0 0 1rem;
+                box-shadow: 4px 4px 0 #0d0d12;
+            }
+
+            .meta-row,
+            .stat-label,
+            .chart-title span,
+            .select-wrapper label {
+                font-size: 0.56rem;
+                color: var(--text-muted);
+            }
+
+            .meta-list {
+                display: flex;
+                flex-direction: column;
+                background-color: var(--bg-color);
+                border: 2px solid var(--panel-border);
+                padding: 1rem;
+                gap: 0.5rem;
+                box-shadow: 4px 4px 0 #0d0d12;
+            }
+
+            .meta-badges {
+                gap: 0.5rem;
+                margin-bottom: 1rem;
+                display: flex;
+                flex-wrap: wrap;
+            }
+
+            .meta-row {
+                display: grid;
+                align-items: baseline;
+                padding: 0.5rem 0;
+                border-top: 1px dashed var(--panel-border);
+                color: var(--secondary);
+                grid-template-columns: 120px minmax(0, 1fr);
+                line-height: 1.2;
+            }
+
+            .meta-row strong {
+                color: #c0caf5;
+                font-weight: 400;
+                overflow-wrap: anywhere;
+                line-height: 1.45;
+            }
+
+            .meta-warning,
+            .meta-ok {
+                border: 2px solid var(--panel-border);
+                background: #1f2335;
+                padding: 9px 10px;
+                line-height: 1.35;
+                box-shadow: 4px 4px 0 #0d0d12;
+            }
+
+            .meta-warning {
+                color: #e0af68;
+            }
+
+            .meta-ok {
+                color: #9ece6a;
+            }
+
+            .badge {
+                display: inline-flex;
+                align-items: center;
+                min-height: 20px;
+                border: 1px solid #565f89;
+                background: #24283b;
+                color: #c0caf5;
+                font-size: 0.58rem;
+                padding: 4px 7px;
+                line-height: 1.2;
+                box-shadow: 4px 4px 0 #0d0d12;
+            }
+
+            .badge-journey {
+                color: #7aa2f7;
+                border-color: rgba(122, 162, 247, 0.6);
+                background: rgba(122, 162, 247, 0.12);
+            }
+
+            .badge-tinyts {
+                color: #e0af68;
+                border-color: rgba(224, 175, 104, 0.6);
+                background: rgba(224, 175, 104, 0.12);
+            }
+
+            @media (max-width: 1180px) {
+                header {
+                    position: static;
+                    height: auto;
+                }
+
+                .workspace {
+                    padding: 18px;
+                }
+
+                .sidebar,
+                .button-sidebar {
+                    position: static;
+                    width: auto;
+                    margin: 18px;
+                }
+
+                #status-banner {
+                    position: static;
+                    margin: 18px;
+                }
+
+                .app-status-bar {
+                    position: static;
+                }
+
+                .chart-card {
+                    grid-column: 1 / -1;
+                }
+            }
+
+            @media (max-width: 980px) {
+                body {
+                    display: block;
+                    overflow: auto;
+                }
+
+                .workspace {
+                    display: block;
+                    overflow: visible;
+                }
+
+                .sidebar,
+                .dashboard-content {
+                    height: auto;
+                    overflow: visible;
+                }
+
+                .landing-panel,
+                .chart-grid {
+                    display: flex;
+                    flex-direction: column;
+                }
+
+                .page-shell,
+                .landing-panel,
+                .sidebar,
+                .chart-grid,
+                .summary-stats-grid {
+                    display: flex;
+                    flex-direction: column;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <header>
+            <div class="window-controls" aria-hidden="true">
+                <span class="window-dot close"></span>
+                <span class="window-dot minimize"></span>
+                <span class="window-dot zoom"></span>
+            </div>
+            <div class="window-title">gogs</div>
+        </header>
+        <section class="landing-panel page-shell" id="landing-panel">
+            <div class="landing-content">
+                <div>
+                    <h2 class="landing-title">
+                        # Engine Benchmarking for Journey and TinyTS
+                    </h2>
+                    <p class="landing-copy">
+                        GOGS runs each engine one at a time, captures raw frame
+                        data, and compares behavior under controlled browser
+                        workloads. The default goal is to show which engine
+                        holds up better under load on this hardware.
+                    </p>
+                    <h3 class="landing-subtitle">## Compare</h3>
+                    <p class="landing-copy">
+                        Use shared workloads for particle, rendering, and
+                        simulation pressure.
+                    </p>
+                    <h3 class="landing-subtitle">## Validate</h3>
+                    <p class="landing-copy">
+                        Import or export raw JSON so a run can be inspected
+                        again later.
+                    </p>
+                    <h3 class="landing-subtitle">## Diagnose</h3>
+                    <p class="landing-copy">
+                        Use feature probes only after the core comparison looks
+                        trustworthy.
+                    </p>
+                    <h2 class="landing-title"># Tests</h2>
+                    <p class="landing-copy">
+                        The Benchmark exposes a suite of performance tests that
+                        can be run to compare the engines.
+                    </p>
+                    <h3 class="landing-subtitle">## Smoke Test</h3>
+                    <p class="landing-copy">
+                        Fast harness check. Confirms automation, import/export,
+                        and charts. Not a performance verdict.
+                    </p>
+                    <h3 class="landing-subtitle">## Standard Test</h3>
+                    <p class="landing-copy">
+                        Main comparison mode. Use this first when asking which
+                        engine performs better under load. Automatically selects
+                        the best backend.
+                    </p>
+                    <h3 class="landing-subtitle">## Full Test</h3>
+                    <p class="landing-copy">
+                        Diagnostic mode. Runs extra probes for deeper
+                        investigation after Standard looks sane.
+                    </p>
+                </div>
+                <div id="status-banner">
+                    <div class="status-header">
+                        <div class="status-title" id="status-title-text">
+                            <svg
+                                class="spinner"
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="3"
+                                stroke-linecap="round"
+                                style="animation: spin 1s linear infinite"
+                            >
+                                <path d="M21 12a9 9 0 1 1-6.219-8.56"></path>
+                            </svg>
+                            Running Benchmarks...
+                        </div>
+                        <div class="status-percentage" id="status-pct">0%</div>
+                    </div>
+                    <div class="status-bar-outer">
+                        <div
+                            class="status-bar-inner"
+                            id="status-progress"
+                        ></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <aside class="button-sidebar panel">
+            <div class="controls-panel">
+                <button class="btn btn-secondary" id="btn-run-smoke">
+                    <span class="btn-icon"
+                        ><svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="1em"
+                            height="1em"
+                            viewBox="0 0 24 24"
+                        >
+                            <path d="M0 0h24v24H0z" fill="none" />
+                            <path
+                                fill="currentColor"
+                                d="M22 11v2h-1v1h-1v1h-2v1h-2v1h-1v1h-2v1h-2v1h-1v1H8v1H6v1H3v-1H2V2h1V1h3v1h2v1h2v1h1v1h2v1h2v1h1v1h2v1h2v1h1v1z"
+                            /></svg
+                    ></span>
+                    <span class="btn-text">Smoke Test</span>
+                </button>
+                <button class="btn btn-primary" id="btn-run-best">
+                    <span class="btn-icon"
+                        ><svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="1em"
+                            height="1em"
+                            viewBox="0 0 24 24"
+                        >
+                            <path d="M0 0h24v24H0z" fill="none" />
+                            <path
+                                fill="currentColor"
+                                d="M22 11v2h-1v1h-1v1h-2v1h-2v1h-1v1h-2v1h-2v1h-1v1H8v1H6v1H3v-1H2V2h1V1h3v1h2v1h2v1h1v1h2v1h2v1h1v1h2v1h2v1h1v1z"
+                            /></svg
+                    ></span>
+                    <span class="btn-text">Standard (WEBGPU)</span>
+                </button>
+                <button class="btn btn-secondary" id="btn-run-webgl2">
+                    <span class="btn-icon"
+                        ><svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="1em"
+                            height="1em"
+                            viewBox="0 0 24 24"
+                        >
+                            <path d="M0 0h24v24H0z" fill="none" />
+                            <path
+                                fill="currentColor"
+                                d="M22 11v2h-1v1h-1v1h-2v1h-2v1h-1v1h-2v1h-2v1h-1v1H8v1H6v1H3v-1H2V2h1V1h3v1h2v1h2v1h1v1h2v1h2v1h1v1h2v1h2v1h1v1z"
+                            /></svg
+                    ></span>
+                    <span class="btn-text">Standard (WebGL2)</span>
+                </button>
+                <button class="btn btn-secondary" id="btn-run-full">
+                    <span class="btn-icon"
+                        ><svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="1em"
+                            height="1em"
+                            viewBox="0 0 24 24"
+                        >
+                            <path d="M0 0h24v24H0z" fill="none" />
+                            <path
+                                fill="currentColor"
+                                d="M22 11v2h-1v1h-1v1h-2v1h-2v1h-1v1h-2v1h-2v1h-1v1H8v1H6v1H3v-1H2V2h1V1h3v1h2v1h2v1h1v1h2v1h2v1h1v1h2v1h2v1h1v1z"
+                            /></svg
+                    ></span>
+                    <span class="btn-text">Full Test</span>
+                </button>
+                <div class="file-upload-wrapper">
+                    <button class="btn btn-secondary">
+                        <span class="btn-icon"
+                            ><svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="1em"
+                                height="1em"
+                                viewBox="0 0 24 24"
+                            >
+                                <path d="M0 0h24v24H0z" fill="none" />
+                                <path
+                                    fill="currentColor"
+                                    d="M22 16v-1h-6v3h-1v1H9v-1H8v-3H2v1H1v6h1v1h20v-1h1v-6zm-4 4h-1v-1h1zm2 0h-1v-1h1z"
+                                />
+                                <path
+                                    fill="currentColor"
+                                    d="M19 7v1h-4v9h-1v1h-4v-1H9V8H5V7h1V6h1V5h1V4h1V3h1V2h1V1h2v1h1v1h1v1h1v1h1v1h1v1z"
+                                /></svg
+                        ></span>
+                        <span class="btn-text">Load JSON</span>
+                    </button>
+                    <input type="file" id="upload-json" accept=".json" />
+                </div>
+                <button class="btn btn-accent" id="btn-export" disabled>
+                    <span class="btn-icon"
+                        ><svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="1em"
+                            height="1em"
+                            viewBox="0 0 24 24"
+                        >
+                            <path d="M0 0h24v24H0z" fill="none" />
+                            <path
+                                fill="currentColor"
+                                d="M6 12H5v-1h4V2h1V1h4v1h1v9h4v1h-1v1h-1v1h-1v1h-1v1h-1v1h-2v-1h-1v-1H9v-1H8v-1H7v-1H6z"
+                            />
+                            <path
+                                fill="currentColor"
+                                d="M22 16v-1h-5v1h-1v1h-1v1h-1v1h-4v-1H9v-1H8v-1H7v-1H2v1H1v6h1v1h20v-1h1v-6zm-2 4h-1v-1h1zm-2-1v1h-1v-1z"
+                            /></svg
+                    ></span>
+                    <span class="btn-text">Export CSV</span>
+                </button>
+                <button class="btn btn-accent" id="btn-export-json" disabled>
+                    <span class="btn-icon"
+                        ><svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="1em"
+                            height="1em"
+                            viewBox="0 0 24 24"
+                        >
+                            <path d="M0 0h24v24H0z" fill="none" />
+                            <path
+                                fill="currentColor"
+                                d="M6 12H5v-1h4V2h1V1h4v1h1v9h4v1h-1v1h-1v1h-1v1h-1v1h-1v1h-2v-1h-1v-1H9v-1H8v-1H7v-1H6z"
+                            />
+                            <path
+                                fill="currentColor"
+                                d="M22 16v-1h-5v1h-1v1h-1v1h-1v1h-4v-1H9v-1H8v-1H7v-1H2v1H1v6h1v1h20v-1h1v-6zm-2 4h-1v-1h1zm-2-1v1h-1v-1z"
+                            /></svg
+                    ></span>
+                    <span class="btn-text">Export JSON</span>
+                </button>
+            </div>
+        </aside>
+
+        <style>
+            @keyframes spin {
+                to {
+                    transform: rotate(360deg);
+                }
+            }
+        </style>
+
+        <div class="workspace">
+            <div class="sidebar panel">
+                <div>
+                    <h3>Journey Benchmark</h3>
+                    <div class="meta-list" id="meta-journey">
+                        No data loaded
+                    </div>
+                </div>
+
+                <div>
+                    <h3>TinyTS Benchmark</h3>
+                    <div class="meta-list" id="meta-tinyts">No data loaded</div>
+                </div>
+            </div>
+
+            <div class="dashboard-content">
+                <div class="tab-nav" id="dashboard-tabs">
+                    <button class="tab-btn active" data-tab="particles">
+                        Particles Suite
+                    </button>
+                    <button class="tab-btn" data-tab="rendering">
+                        Rendering Suite
+                    </button>
+                    <button class="tab-btn" data-tab="audio">
+                        Audio Suite
+                    </button>
+                    <button class="tab-btn" data-tab="ecs-verlet">
+                        ECS & Verlet Suite
+                    </button>
+                    <button class="tab-btn" data-tab="bundle">
+                        Bundle Analysis
+                    </button>
+                </div>
+
+                <div class="tab-panel active" id="panel-particles">
+                    <div class="sub-controls">
+                        <div class="sub-tab-nav" id="particles-collision-tabs">
+                            <button
+                                class="sub-tab-btn active"
+                                data-collision="none"
+                            >
+                                No Collision
+                            </button>
+                            <button class="sub-tab-btn" data-collision="grid">
+                                Spatial Grid
+                            </button>
+                        </div>
+                        <div class="select-wrapper">
+                            <label for="particles-entity-select"
+                                >Entity Filter:</label
+                            >
+                            <select
+                                class="select-input"
+                                id="particles-entity-select"
+                            >
+                                <option value="1024">1,024 Entities</option>
+                                <option value="8192">8,192 Entities</option>
+                                <option value="16384">16,384 Entities</option>
+                                <option value="32768" selected>
+                                    32,768 Entities
+                                </option>
+                                <option value="65536">65,536 Entities</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="summary-stats-grid">
+                        <div class="stat-card journey">
+                            <div class="stat-label">Journey Mean FPS</div>
+                            <div class="stat-num" id="stat-j-fps">-</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">TinyTS Mean FPS</div>
+                            <div class="stat-num" id="stat-t-fps">-</div>
+                        </div>
+                        <div class="stat-card journey">
+                            <div class="stat-label">Journey P99 Latency</div>
+                            <div class="stat-num" id="stat-j-p99">-</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">TinyTS P99 Latency</div>
+                            <div class="stat-num" id="stat-t-p99">-</div>
+                        </div>
+                    </div>
+
+                    <div class="chart-grid">
+                        <div class="chart-card">
+                            <div class="chart-title">
+                                FPS Curve vs Entity Count
+                                <span>Higher is better</span>
+                            </div>
+                            <div class="chart-canvas-holder">
+                                <canvas id="chart-particles-fps"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="chart-card">
+                            <div class="chart-title">
+                                Latency Percentiles vs Entity Count
+                                <span>Lower is better (Overlaid)</span>
+                            </div>
+                            <div class="chart-canvas-holder">
+                                <canvas
+                                    id="chart-particles-percentiles"
+                                ></canvas>
+                            </div>
+                        </div>
+
+                        <div class="chart-card full-width">
+                            <div class="chart-title">
+                                Frame Time - Rolling 120 Frames
+                                <span>Frame pacing</span>
+                            </div>
+                            <div class="chart-canvas-holder">
+                                <canvas id="chart-particles-rolling"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="chart-card">
+                            <div class="chart-title">
+                                Frame Time Distribution (Histogram)
+                                <span
+                                    >Tight cluster = smoother frame
+                                    delivery</span
+                                >
+                            </div>
+                            <div class="chart-canvas-holder">
+                                <canvas id="chart-particles-histogram"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="chart-card">
+                            <div class="chart-title">
+                                JS Host Heap Over Time
+                                <span>Heap samples only</span>
+                            </div>
+                            <div class="chart-canvas-holder">
+                                <canvas id="chart-particles-memory"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-panel" id="panel-rendering">
+                    <div class="chart-grid">
+                        <div class="chart-card full-width">
+                            <div class="chart-title">
+                                Rendering Workloads: Mean Frame Time (ms)
+                                <span
+                                    >Missing bars mean the profile did not run
+                                    that probe</span
+                                >
+                            </div>
+                            <div class="chart-canvas-holder">
+                                <canvas id="chart-rendering-workloads"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="chart-card">
+                            <div class="chart-title">
+                                TinyTS Renderer Draw Call / Batch Flush Analysis
+                                <span>Quadratic rendering efficiency</span>
+                            </div>
+                            <div class="chart-canvas-holder">
+                                <canvas id="chart-rendering-drawcalls"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="chart-card">
+                            <div class="chart-title">
+                                Bloom Cost Overhead
+                                <span
+                                    >Rect baseline vs bloom probe where
+                                    available</span
+                                >
+                            </div>
+                            <div class="chart-canvas-holder">
+                                <canvas
+                                    id="chart-rendering-bloom-cost"
+                                ></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-panel" id="panel-audio">
+                    <div class="chart-grid">
+                        <div class="chart-card">
+                            <div class="chart-title">
+                                Audio Voice Stress
+                                <span
+                                    >TinyTS playSound vs Journey Resonance DSP
+                                    loop</span
+                                >
+                            </div>
+                            <div class="chart-canvas-holder">
+                                <canvas id="chart-audio-polyphony"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="chart-card">
+                            <div class="chart-title">
+                                Sequencer Ticking Overhead
+                                <span>8k particles plus sequencer update</span>
+                            </div>
+                            <div class="chart-canvas-holder">
+                                <canvas id="chart-audio-sequencer"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-panel" id="panel-ecs-verlet">
+                    <div class="chart-grid">
+                        <div class="chart-card">
+                            <div class="chart-title">
+                                Verlet Ropes Simulation
+                                <span
+                                    >TinyTS helper vs Journey-side equivalent
+                                    algorithm</span
+                                >
+                            </div>
+                            <div class="chart-canvas-holder">
+                                <canvas id="chart-verlet-ropes"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="chart-card">
+                            <div class="chart-title">
+                                Verlet Point Mass Integration
+                                <span
+                                    >TinyTS helper vs Journey-side equivalent
+                                    algorithm</span
+                                >
+                            </div>
+                            <div class="chart-canvas-holder">
+                                <canvas id="chart-verlet-points"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="chart-card full-width">
+                            <div class="chart-title">
+                                TinyTS Registry ECS Subsystem Profile
+                                <span
+                                    >TinyTS-only CPU and view-query probes</span
+                                >
+                            </div>
+                            <div class="chart-canvas-holder">
+                                <canvas id="chart-ecs-tinyts"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-panel" id="panel-bundle">
+                    <div class="chart-grid">
+                        <div class="chart-card">
+                            <div class="chart-title">
+                                Engine Design Philosophy
+                            </div>
+                            <div class="chart-canvas-holder">
+                                <p>
+                                    <strong>Journey (Rust/WASM)</strong> is
+                                    built on top of WASM linear memory. It
+                                    compiles down to a binary payload of ~3MB
+                                    (raw) and ~1.2MB (brotli). The current JS
+                                    heap chart still includes host wrapper,
+                                    metric collection, and JS/WASM boundary
+                                    effects, so WASM linear memory must be read
+                                    separately before making allocation claims.
+                                </p>
+                                <p>
+                                    <strong>TinyTS (TypeScript)</strong> is
+                                    extremely lightweight in transfer size
+                                    (~32KB brotli), which makes it quick to
+                                    transfer. It runs on JavaScript's standard
+                                    runtime heap, so heap sawtooth patterns
+                                    should be interpreted alongside frame
+                                    pacing, work-duration timing, and after-stop
+                                    memory checkpoints.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="chart-card">
+                            <div class="chart-title">
+                                Total Asset Transfer Sizes
+                            </div>
+                            <div class="chart-canvas-holder">
+                                <canvas id="chart-bundle-size"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="chart-card">
+                            <div class="chart-title">
+                                Initial Engine Load Timeline
+                            </div>
+                            <div class="chart-canvas-holder">
+                                <canvas id="chart-bundle-load"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="chart-card">
+                            <div class="chart-title">
+                                V8 Heap / WASM Memory Checkpoints
+                            </div>
+                            <div class="chart-canvas-holder">
+                                <canvas
+                                    id="chart-bundle-mem-checkpoints"
+                                ></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="app-status-bar">
+            <span><strong>gogs</strong> Sequential Benchmark</span>
+            <div class="githubLinks">
+                <a
+                    href="https://github.com/ujjwalvivek/journey"
+                    target="_blank"
+                    rel="noreferrer"
+                >
+                    <span class="githubIcon" aria-hidden="true">
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="1em"
+                            height="1em"
+                            viewBox="0 0 12 12"
+                        >
+                            <path d="M0 0h12v12H0z" fill="none" />
+                            <path
+                                fill="currentColor"
+                                d="M2 12h2v-1H3v-1H2V9H1V8h1v1h1v1h1V9h1V8H3V7H2V4h1V2h1v1h3V2h1v2h1v3H8v1H6v1h1v3h2v-1h1v-1h1V3h-1V2H9V1H2v1H1v1H0v7h1v1h1Zm0 0"
+                            />
+                        </svg>
+                    </span>
+                    <span>Journey</span>
+                </a>
+                <a
+                    href="https://github.com/ujjwalvivek/tinyts"
+                    target="_blank"
+                    rel="noreferrer"
+                >
+                    <span class="githubIcon" aria-hidden="true">
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="1em"
+                            height="1em"
+                            viewBox="0 0 12 12"
+                        >
+                            <path d="M0 0h12v12H0z" fill="none" />
+                            <path
+                                fill="currentColor"
+                                d="M2 12h2v-1H3v-1H2V9H1V8h1v1h1v1h1V9h1V8H3V7H2V4h1V2h1v1h3V2h1v2h1v3H8v1H6v1h1v3h2v-1h1v-1h1V3h-1V2H9V1H2v1H1v1H0v7h1v1h1Zm0 0"
+                            />
+                        </svg>
+                    </span>
+                    <span>TinyTS</span>
+                </a>
+            </div>
+        </div>
+
+        <script type="module" src="/src/main.tsx"></script>
+    </body>
+</html>
