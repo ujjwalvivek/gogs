@@ -220,6 +220,7 @@ async function runAutomation(
   forceWebGL2 = false,
   profile: BenchmarkProfile = "standard",
 ) {
+  const shouldShare = new URLSearchParams(window.location.search).has("share");
   const statusBanner = document.getElementById("status-banner");
   const statusText = document.getElementById("status-title-text");
   const progressBar = document.getElementById("status-progress");
@@ -298,7 +299,7 @@ async function runAutomation(
   };
   window.addEventListener("message", progressHandler);
 
-  const completeMsg = await waitForMessage(journeyWin, "BENCH_COMPLETE", 300000);
+  const completeMsg = await waitForMessage(journeyWin, "BENCH_COMPLETE", 0);
   if (!completeMsg) {
     if (statusText) statusText.textContent = "Journey benchmark timed out.";
     window.removeEventListener("message", progressHandler);
@@ -351,7 +352,7 @@ async function runAutomation(
   };
   window.addEventListener("message", tProgressHandler);
 
-  const tCompleteMsg = await waitForMessage(tinytsWin, "BENCH_COMPLETE", 300000);
+  const tCompleteMsg = await waitForMessage(tinytsWin, "BENCH_COMPLETE", 0);
   if (!tCompleteMsg) {
     if (statusText)
       statusText.textContent = "TinyTS benchmark timed out.";
@@ -368,6 +369,23 @@ async function runAutomation(
     statusText.innerText = "Automation complete! Rendering results...";
   if (progressBar) progressBar.style.width = "100%";
   if (pctLabel) pctLabel.innerText = "100%";
+
+  if (shouldShare) {
+    const merged = { journey: journeyData, tinyts: tinytsData };
+    try {
+      const res = await fetch("/api/share", {
+        method: "POST",
+        body: JSON.stringify(merged),
+      });
+      if (res.ok) {
+        const { id } = await res.json();
+        console.log("📎 Share link: https://gogs.ujjwalvivek.com/?id=" + id);
+        if (statusText) statusText.innerText = `Shared as ?id=${id}`;
+      }
+    } catch (err) {
+      console.error("Share upload failed:", err);
+    }
+  }
 
   setTimeout(() => {
     if (statusBanner) statusBanner.style.display = "none";
@@ -1568,13 +1586,27 @@ function handleRawJsonExport() {
   );
 }
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
   const faviconLink = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
   if (faviconLink) faviconLink.href = FAVICON_DATA;
 
   const fontStyle = document.createElement("style");
     fontStyle.textContent = `@font-face { font-family: "TinyTS"; src: url(${FONT_DATA}); font-weight: 400; font-style: normal; font-display: block; }`;
     document.head.appendChild(fontStyle);
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const sharedId = urlParams.get("id");
+  if (sharedId) {
+    try {
+      const res = await fetch(`/s/${sharedId}`);
+      if (res.ok) {
+        const payload = await res.json();
+        loadJsonPayload(payload);
+      }
+    } catch (err) {
+      console.error("Failed to load shared benchmark:", err);
+    }
+  }
 
   const controls = document.querySelector(".button-sidebar");
   const sidebar = document.querySelector(".sidebar");
