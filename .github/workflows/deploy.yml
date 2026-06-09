@@ -1,0 +1,58 @@
+name: Deploy to Cloudflare Pages
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Setup wasm-pack
+        uses: jetli/wasm-pack-action@v0.4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Build journey-bench
+        run: wasm-pack build journey-bench --target web --release
+
+      - name: Build tinyts-bench
+        run: |
+          cd tinyts-bench
+          npm install
+          npm run build
+
+      - name: Build bench-data
+        run: |
+          cd bench-data
+          npm install
+          npm run build
+
+      - name: Assemble deployment
+        run: |
+          mkdir -p deploy/journey-bench/pkg deploy/tinyts-bench
+          cp -r bench-data/dist/* deploy/
+          cp journey-bench/index.html deploy/journey-bench/
+          cp -r journey-bench/pkg/* deploy/journey-bench/pkg/
+          cp -r tinyts-bench/dist/* deploy/tinyts-bench/
+
+          cat > deploy/_headers << 'EOF'
+          /*
+            Cross-Origin-Opener-Policy: same-origin
+            Cross-Origin-Embedder-Policy: require-corp
+          EOF
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CF_API_TOKEN }}
+          command: pages deploy deploy/ --project-name=gogs
