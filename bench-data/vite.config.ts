@@ -4,8 +4,9 @@ import fs from "fs";
 import type { IncomingMessage, ServerResponse } from "http";
 
 export default defineConfig({
-  server: {
-    port: 5175,
+    server: {
+      host: "0.0.0.0",
+      port: 5175,
     fs: {
       allow: [".."],
     },
@@ -13,6 +14,7 @@ export default defineConfig({
       "Cross-Origin-Opener-Policy": "same-origin",
       "Cross-Origin-Embedder-Policy": "require-corp",
     },
+    allowedHosts: [".ts.net"],
   },
   plugins: [
     {
