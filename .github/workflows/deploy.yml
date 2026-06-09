@@ -3,6 +3,8 @@ name: Deploy to Cloudflare Pages
 on:
   push:
     branches: [main]
+    tags:
+      - "v*"
 
 jobs:
   build-and-deploy:
@@ -55,15 +57,50 @@ jobs:
             Cross-Origin-Embedder-Policy: require-corp
           EOF
 
-      - name: Create Cloudflare Pages project (if needed)
-        run: npx wrangler pages project create gogs --production-branch=main || true
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
       - name: Deploy to Cloudflare Pages
+        if: startsWith(github.ref, 'refs/heads/')
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy deploy/ --project-name=gogs --branch=main --commit-dirty=true
+
+      - name: Get tag name
+        if: startsWith(github.ref, 'refs/tags/')
+        id: tag
+        run: echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Create deployment archive
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          cd deploy
+          zip -r ../gogs-benchmark-${{ steps.tag.outputs.tag }}.zip .
+          cd ..
+
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          files: gogs-benchmark-${{ steps.tag.outputs.tag }}.zip
+          body: |
+            # GOGS: Benchmark ${{ steps.tag.outputs.tag }}
+
+            This release contains the benchmark offline package.
+
+            ## Contents
+
+            - **bench-data**: Main benchmark UI and data visualization
+            - **journey-bench**: Journey (Rust/WASM) benchmark engine
+            - **tinyts-bench**: TinyTS (TypeScript) benchmark engine
+
+            ## Quick Start
+
+            1. Extract the zip file.
+            2. Serve locally with any HTTP server.
+
+            ## Documentation
+
+            See [README.md](https://github.com/${{ github.repository }}/blob/main/README.md) for detailed benchmark documentation.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

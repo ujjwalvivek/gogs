@@ -145,7 +145,7 @@ npm run dev
 
 ## Further Plan
 
-The current smoke output validates automation and export shape only.Before anything, V3 requires:
+The current smoke output validates automation and export shape only.Before anything, V2 requires:
 
 - unified wall-clock timing around the update/render work unit in both engines
 - separate frame pacing and work-duration charts
