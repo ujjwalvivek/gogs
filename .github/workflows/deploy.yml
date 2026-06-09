@@ -52,7 +52,6 @@ jobs:
           EOF
 
       - name: Deploy to Cloudflare Pages
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CF_API_TOKEN }}
-          command: pages deploy deploy/ --project-name=gogs
+        run: npx wrangler pages deploy deploy/ --project-name=gogs
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
