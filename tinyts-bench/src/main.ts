@@ -68,7 +68,7 @@ try {
 } catch (e) {}
 
 let firstFrameTime: number | null = null;
-const engineStartRealTime = performance.now();
+let engineStartRealTime = 0;
 
 function getHeapSize(): number | undefined {
   if (typeof performance !== "undefined" && (performance as any).memory) {
@@ -101,6 +101,7 @@ async function getGPUInfo(): Promise<string> {
 }
 
 async function runBenchmark() {
+  engineStartRealTime = performance.now();
   const st = document.getElementById("status-text");
   if (st) st.style.display = "none";
   await new Promise((r) => setTimeout(r, 500));

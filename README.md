@@ -6,44 +6,41 @@ A sandboxed, sequential benchmarking harness for comparing Journey (Rust/WASM)
 and TinyTS (TypeScript) game engines. Engines run in isolation,
 produce standardized metric JSON, and compares them.
 
-- Journey Engine - [https://docs.rs/journey-engine/1.3.0]
-- Journey Sequencer - [https://docs.rs/journey-sequencer/1.3.0]
-- Journey Sound - [https://docs.rs/journey-sound/1.3.0]
-- TinyTS Docs - [https://tinyts.ujjwalvivek.com/]
-
----
+- Journey Engine: [https://docs.rs/journey-engine/1.3.0]
+- Journey Sequencer: [https://docs.rs/journey-sequencer/1.3.0]
+- Journey Sound: [https://docs.rs/journey-sound/1.3.0]
+- TinyTS Docs: [https://tinyts.ujjwalvivek.com/]
 
 ## Build Pipeline
 
-### Journey
-
 ```bash
+# Journey
 cd journey-bench
 wasm-pack build --target web --release
 cd www && npx serve .
-```
 
-### TinyTS
-
-```bash
+# TinyTS
 cd tinyts-bench
 npm install
 npm run dev
-```
 
-### Harness
-
-```bash
+# Bench Data
 cd bench-data
 npm install
 npm run dev
 ```
 
----
+## Benchmark Suites
+
+- **Suite 1**: Particle Stress
+- **Suite 2**: Rendering + Post-FX Stress
+- **Suite 3**: Audio + Sequencer Stress
+- **Suite 4**: ECS + Verlet Stress
+- **Suite 5**: Physics + Collision Stress
 
 ### Flow
 
-```test
+```bash
   → harness opens journey-bench in new window
   → journey-bench runs all conditions unattended
   → harness receives payload, closes journey window
@@ -54,11 +51,9 @@ npm run dev
   → harness renders all graphs
 ```
 
----
-
 ## Bundle & Load Analysis
 
-### Binary / Bundle Size
+### Binary Bundle Size
 
 | Metric              | Journey    | TinyTS    |
 | ------------------- | ---------- | --------- |
@@ -69,32 +64,25 @@ npm run dev
 | npm bundle brotli   | N/A        | 31.23 KB  |
 | Total transfer size | 1443.25 KB | 36.38 KB  |
 
----
+### Load Performance
 
-### Load Performance - Mostly Incomplete Data
-
-| Metric                | Journey   | TinyTS                      |
-| --------------------- | --------- | --------------------------- |
-| WASM fetch time       | 30.79 ms  | N/A                         |
-| WASM compile time     | 2.50 ms   | N/A                         |
-| WASM instantiate time | 1.55 ms   | N/A                         |
-| JS parse + execute    | N/A       | `PerformanceResourceTiming` |
-| Time to first frame   | 2005.8 ms | 2544.8 ms                   |
-| Time to interactive   | N/A       | N/A                         |
-
----
+| Metric                | Journey   | TinyTS    |
+| --------------------- | --------- | --------- |
+| WASM fetch time       | 30.79 ms  | N/A       |
+| WASM compile time     | 2.50 ms   | N/A       |
+| WASM instantiate time | 1.55 ms   | N/A       |
+| JS parse + execute    | N/A       | < 1 ms    |
+| Time to first frame   | 2005.8 ms | 2544.8 ms |
 
 ### Runtime Memory
 
-| Metric                     | Journey  | TinyTS    |
-| -------------------------- | -------- | --------- |
-| WASM linear memory initial | 66.58 MB | N/A       |
-| WASM linear memory at 65k  | 67.12 MB | N/A       |
-| JS heap at idle            | 66.58 MB | 7.72 MB   |
-| JS heap at 65k entities    | 67.12 MB | 33.87 MB  |
-| JS heap after stop         | 50.16 MB | 115.12 MB |
-
----
+| Metric                  | Journey  | TinyTS    |
+| ----------------------- | -------- | --------- |
+| WASM memory initial     | 66.58 MB | N/A       |
+| WASM memory at 65k      | 67.12 MB | N/A       |
+| JS heap at idle         | 66.58 MB | 7.72 MB   |
+| JS heap at 65k entities | 67.12 MB | 33.87 MB  |
+| JS heap after stop      | 50.16 MB | 115.12 MB |
 
 ## Engine Deep Dive
 
@@ -133,55 +121,34 @@ npm run dev
 | **Perf API**     | `stats` and `getRendererStats()`                                |
 | **Memory Model** | JavaScript heap with V8 GC; pooling reduces allocation pressure |
 
----
+## Run Profiles
 
-## Proposed Plan
+| Profile    | Purpose                | Typical use                                              |
+| ---------- | ---------------------- | -------------------------------------------------------- |
+| `smoke`    | Short sanity run       | Validate harness automation and exports                  |
+| `standard` | Default run            | Compare core behavior without a 40 minute session        |
+| `full`     | Longer exploratory run | Stress optional probes after the standard run looks sane |
 
-### Suite 1: Particle Stress
+## Feature Probes
 
-| Parameter            | Value                               |
-| -------------------- | ----------------------------------- |
-| Entity counts        | 1024 / 8192 / 16384 / 32768 / 65536 |
-| Collision modes      | none / aabb / fast                  |
-| Warmup               | 5 seconds                           |
-| Recording            | 30 seconds                          |
-| Spawn rate           | `entityTarget / 10` per second      |
-| **Total conditions** | 15 per engine                       |
+- `render_bloom_16384`: engine bloom/post-processing probe.
+- `audio_polyphony_*`: TinyTS uses `playSound`; Journey runs Resonance DSP samples without a browser audio sink.
+- `audio_sequencer_*`: sequencer update plus 8k background particles.
+- `verlet_*`: TinyTS uses its Verlet helpers; Journey uses an equivalent benchmark-side Verlet implementation.
+- `ecs_*`: TinyTS-only Registry probes. Churn and hierarchy conditions are CPU-only, so blank screens are expected.
+- `render_post_fx_stack_16384`: TinyTS-only full post-FX stack, available in `full`.
 
-### Suite 2: Rendering + Post-FX Stress
+## Known Caveats
 
-| Test                     | Description                                                                   |
-| ------------------------ | ----------------------------------------------------------------------------- |
-| **Rect flood**           | Draw 1k-32k filled rects per frame. Measures raw draw throughput.             |
-| **Mixed shapes**         | Draw rects, lines, and circles. Measures batch breaks from shape switching.   |
-| **Texture sprites**      | Draw textured sprites from a procedural texture. Measures texture batching.   |
-| **Post-processing load** | Run 16k particles with bloom enabled. Measures GPU post-processing cost.      |
-| **Post-FX stack**        | TinyTS-only full post stack: bloom, color grade, vignette, grain, atmosphere. |
+- Journey frame timing uses engine-reported frame time; TinyTS uses browser wall-clock delta. Acceptable for broad runs, not final instrumentation.
+- The memory-over-time chart currently shows JS host heap samples. A sawtooth in Journey's JS host heap does not prove Rust/WASM allocation inside the engine; it may come from wrapper code, JS/WASM boundary conversion, metric collection, rendering glue, or JSON accumulation.
 
-### Suite 3: Audio + Sequencer Stress
+## Further Plan
 
-| Test                   | Description                                                                        |
-| ---------------------- | ---------------------------------------------------------------------------------- |
-| **Polyphony flood**    | Trigger 4-64 simultaneous synth voices. Measures audio/frame-time impact.          |
-| **Sequencer playback** | Run 4 tracks at 120/180/240 BPM while rendering 8k particles. Measures mixed load. |
+The current smoke output validates automation and export shape only.Before anything, V3 requires:
 
-### Suite 4: ECS + Verlet Stress
-
-#### 4a: ECS Stress
-
-TinyTS-only. Journey uses direct `Vec` management instead of an ECS.
-
-| Test                 | Description                                                       |
-| -------------------- | ----------------------------------------------------------------- |
-| **Entity churn**     | Create/destroy 1000 entities per frame with 3 components each.    |
-| **View query**       | Query `Position + Velocity + Health` across 10k/30k/60k entities. |
-| **Hierarchy stress** | Build 10k parent-child entities and destroy subtrees.             |
-
-#### 4b: Verlet Physics Stress
-
-| Test                  | Description                                                              |
-| --------------------- | ------------------------------------------------------------------------ |
-| **Rope stress**       | Simulate 10/50/100/200 ropes with 20 points and 8 constraint passes.     |
-| **Point mass stress** | Simulate 1k/4k/8k/16k free points with gravity and boundary constraints. |
-
----
+- unified wall-clock timing around the update/render work unit in both engines
+- separate frame pacing and work-duration charts
+- separate JS heap and WASM linear-memory charts
+- production-build load timing with cache mode recorded
+- raw JSON retained for frame-level analysis
