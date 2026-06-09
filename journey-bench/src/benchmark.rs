@@ -853,23 +853,6 @@ impl GameApp for BenchmarkApp {
 
     fn update(&mut self, ctx: &mut Context<Self::Action>) {
         let dt = ctx.delta_time;
-        static mut FRAME_COUNTER: u32 = 0;
-        unsafe {
-            FRAME_COUNTER += 1;
-            if FRAME_COUNTER % 60 == 0 {
-                web_sys::console::log_1(
-                    &format!(
-                        "dt: {}, elapsed: {}, recording: {}, index: {}, particles: {}",
-                        dt,
-                        self.elapsed_seconds,
-                        self.recording,
-                        self.current_index,
-                        self.particles.len()
-                    )
-                    .into(),
-                );
-            }
-        }
         self.elapsed_seconds += dt;
         let now = web_sys::window().unwrap().performance().unwrap().now();
 

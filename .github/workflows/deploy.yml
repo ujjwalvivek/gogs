@@ -39,11 +39,14 @@ jobs:
 
       - name: Assemble deployment
         run: |
-          mkdir -p deploy/journey-bench/pkg deploy/tinyts-bench
+          mkdir -p deploy/journey-bench/pkg deploy/tinyts-bench/font deploy/dist/font deploy/src/font
           cp -r bench-data/dist/* deploy/
           cp journey-bench/index.html deploy/journey-bench/
           cp -r journey-bench/pkg/* deploy/journey-bench/pkg/
           cp -r tinyts-bench/dist/* deploy/tinyts-bench/
+          cp tinyts-bench/node_modules/@ujjwalvivek/tinyts/dist/font/tinyTS.woff2 deploy/tinyts-bench/font/
+          cp tinyts-bench/node_modules/@ujjwalvivek/tinyts/dist/font/tinyTS.woff2 deploy/dist/font/ 2>/dev/null || true
+          cp tinyts-bench/node_modules/@ujjwalvivek/tinyts/dist/font/tinyTS.woff2 deploy/src/font/ 2>/dev/null || true
 
           cat > deploy/_headers << 'EOF'
           /*

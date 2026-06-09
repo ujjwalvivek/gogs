@@ -189,15 +189,30 @@ legendLabelDefaults.padding = 8;
 
 const benchmarkWindowFeatures = "width=800,height=450";
 
-function waitForMessage(win: Window | null, type: string): Promise<any> {
+function waitForMessage(
+  _win: Window | null,
+  type: string,
+  timeoutMs = 0,
+  filter?: (data: any) => boolean,
+): Promise<any | null> {
   return new Promise((resolve) => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
     function handler(e: MessageEvent) {
-      if (e.data?.type === type) {
+      if (e.data?.type === type && (!filter || filter(e.data))) {
+        if (timer) clearTimeout(timer);
         window.removeEventListener("message", handler);
         resolve(e.data);
       }
     }
     window.addEventListener("message", handler);
+
+    if (timeoutMs > 0) {
+      timer = setTimeout(() => {
+        window.removeEventListener("message", handler);
+        resolve(null);
+      }, timeoutMs);
+    }
   });
 }
 
@@ -228,7 +243,39 @@ async function runAutomation(
     benchmarkWindowFeatures,
   );
 
-  await waitForMessage(journeyWin, "BENCH_LOADED");
+  const tinytsWin = window.open(
+    `/tinyts-bench/index.html${urlSuffix}`,
+    "_blank",
+    `${benchmarkWindowFeatures},left=820`,
+  );
+
+  const tinytsLoadedPromise = waitForMessage(
+    tinytsWin, "BENCH_LOADED", 300000,
+    (d) => d.engine === "tinyts",
+  );
+
+  const journeyErrorCleanup = () => {
+    window.removeEventListener("message", journeyErrorHandler);
+  };
+  const journeyErrorHandler = (e: MessageEvent) => {
+    if (e.data?.type === "BENCH_ERROR" && e.data?.engine === "journey") {
+      if (statusText) statusText.textContent = `Journey error: ${e.data.error}`;
+    }
+  };
+  window.addEventListener("message", journeyErrorHandler);
+
+  const journeyLoaded = await waitForMessage(
+    journeyWin, "BENCH_LOADED", 30000,
+    (d) => d.engine === "journey",
+  );
+  if (!journeyLoaded) {
+    journeyErrorCleanup();
+    if (statusText) statusText.textContent = "Journey window failed to load.";
+    tinytsWin?.close();
+    if (statusBanner) setTimeout(() => { statusBanner.style.display = "none"; }, 3000);
+    return;
+  }
+  journeyErrorCleanup();
 
   if (statusText)
     statusText.textContent = `Running Journey ${profile} benchmark...`;
@@ -251,23 +298,39 @@ async function runAutomation(
   };
   window.addEventListener("message", progressHandler);
 
-  const completeMsg = await waitForMessage(journeyWin, "BENCH_COMPLETE");
+  const completeMsg = await waitForMessage(journeyWin, "BENCH_COMPLETE", 300000);
+  if (!completeMsg) {
+    if (statusText) statusText.textContent = "Journey benchmark timed out.";
+    window.removeEventListener("message", progressHandler);
+    journeyWin?.close();
+    tinytsWin?.close();
+    if (journeyData) loadRunData("journey", journeyData);
+    return;
+  }
+  journeyErrorCleanup();
   journeyData = completeMsg.payload;
   window.removeEventListener("message", progressHandler);
   journeyWin?.close();
 
   if (statusText)
-    statusText.textContent = "Launching TinyTS benchmark window...";
+    statusText.textContent = "Waiting for TinyTS to load...";
   if (progressBar) progressBar.style.width = "52%";
   if (pctLabel) pctLabel.innerText = "52%";
 
-  const tinytsWin = window.open(
-    `/tinyts-bench/index.html${urlSuffix}`,
-    "_blank",
-    `${benchmarkWindowFeatures},left=820`,
-  );
+  const tinytsLoaded = await tinytsLoadedPromise;
 
-  await waitForMessage(tinytsWin, "BENCH_LOADED");
+  if (!tinytsLoaded) {
+    if (statusText)
+      statusText.textContent = "TinyTS window failed to load — skipping.";
+    if (progressBar) progressBar.style.width = "100%";
+    if (pctLabel) pctLabel.innerText = "100%";
+    tinytsWin?.close();
+    setTimeout(() => {
+      if (statusBanner) statusBanner.style.display = "none";
+    }, 3000);
+    if (journeyData) loadRunData("journey", journeyData);
+    return;
+  }
 
   if (statusText)
     statusText.textContent = `Running TinyTS ${profile} benchmark...`;
@@ -288,7 +351,15 @@ async function runAutomation(
   };
   window.addEventListener("message", tProgressHandler);
 
-  const tCompleteMsg = await waitForMessage(tinytsWin, "BENCH_COMPLETE");
+  const tCompleteMsg = await waitForMessage(tinytsWin, "BENCH_COMPLETE", 300000);
+  if (!tCompleteMsg) {
+    if (statusText)
+      statusText.textContent = "TinyTS benchmark timed out.";
+    window.removeEventListener("message", tProgressHandler);
+    tinytsWin?.close();
+    if (journeyData) loadRunData("journey", journeyData);
+    return;
+  }
   const tinytsData = tCompleteMsg.payload;
   window.removeEventListener("message", tProgressHandler);
   tinytsWin?.close();
@@ -303,7 +374,7 @@ async function runAutomation(
   }, 3000);
 
   loadRunData("journey", journeyData!);
-  loadRunData("tinyts", tinytsData!);
+  loadRunData("tinyts", tinytsData);
 }
 
 function browserSummary(userAgent: string): string {
@@ -1598,4 +1669,9 @@ document.addEventListener("DOMContentLoaded", () => {
   document
     .getElementById("btn-export-json")
     ?.addEventListener("click", handleRawJsonExport);
+
+  document.fonts.ready.then(() => {
+    const el = document.getElementById("app-loading");
+    if (el) el.classList.add("hide");
+  });
 });

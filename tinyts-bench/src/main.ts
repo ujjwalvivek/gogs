@@ -101,6 +101,8 @@ async function getGPUInfo(): Promise<string> {
 }
 
 async function runBenchmark() {
+  const st = document.getElementById("status-text");
+  if (st) st.style.display = "none";
   await new Promise((r) => setTimeout(r, 500));
   memoryProfile.jsHeapAtIdleBytes = getHeapSize();
 
