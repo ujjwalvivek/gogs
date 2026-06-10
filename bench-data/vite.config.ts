@@ -14,7 +14,7 @@ export default defineConfig({
       "Cross-Origin-Opener-Policy": "same-origin",
       "Cross-Origin-Embedder-Policy": "require-corp",
     },
-    allowedHosts: [".ts.net"],
+    allowedHosts: [".ts.net", "datacenter"],
   },
   plugins: [
     {

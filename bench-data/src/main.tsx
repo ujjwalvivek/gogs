@@ -215,16 +215,7 @@ function waitForMessage(
   });
 }
 
-async function runAutomation(
-  forceWebGL2 = false,
-  profile: BenchmarkProfile = "standard",
-) {
-  const shouldShare = new URLSearchParams(window.location.search).has("share");
-  const statusBanner = document.getElementById("status-banner");
-  const statusText = document.getElementById("status-title-text");
-  const progressBar = document.getElementById("status-progress");
-  const pctLabel = document.getElementById("status-pct");
-
+function startBenchmark(forceWebGL2 = false, profile: BenchmarkProfile = "standard") {
   const params = new URLSearchParams();
   params.set("profile", profile);
   if (forceWebGL2) params.set("renderer", "webgl2");
@@ -242,11 +233,28 @@ async function runAutomation(
     `${benchmarkWindowFeatures},left=820`,
   );
 
+  const statusBanner = document.getElementById("status-banner");
+  const statusText = document.getElementById("status-title-text");
+  const progressBar = document.getElementById("status-progress");
+  const pctLabel = document.getElementById("status-pct");
   if (statusBanner) statusBanner.style.display = "flex";
-  if (statusText)
-    statusText.textContent = "Launching Journey benchmark window...";
+  if (statusText) statusText.textContent = "Launching Journey benchmark window...";
   if (progressBar) progressBar.style.width = "2%";
   if (pctLabel) pctLabel.innerText = "2%";
+
+  runAutomation(journeyWin, tinytsWin, profile);
+}
+
+async function runAutomation(
+  journeyWin: Window | null,
+  tinytsWin: Window | null,
+  profile: BenchmarkProfile,
+) {
+  const shouldShare = new URLSearchParams(window.location.search).has("share");
+  const statusBanner = document.getElementById("status-banner");
+  const statusText = document.getElementById("status-title-text");
+  const progressBar = document.getElementById("status-progress");
+  const pctLabel = document.getElementById("status-pct");
 
   const tinytsLoadedPromise = waitForMessage(
     tinytsWin,
@@ -1657,13 +1665,31 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const sizeSelect = document.getElementById(
     "particles-entity-select",
-  ) as HTMLSelectElement;
+  ) as HTMLElement;
   if (sizeSelect) {
-    sizeSelect.addEventListener("change", () => {
-      state.particles.entityCount = parseInt(sizeSelect.value);
+    const t = sizeSelect.querySelector(".psel-t") as HTMLElement;
+    const d = sizeSelect.querySelector(".psel-d") as HTMLElement;
+    t?.addEventListener("click", (e) => { e.stopPropagation(); sizeSelect.classList.toggle("on"); });
+    d?.addEventListener("click", (e) => {
+      const item = (e.target as HTMLElement).closest("[data-v]") as HTMLElement;
+      if (!item) return;
+      d.querySelectorAll("[data-v]").forEach((o) => o.classList.remove("on"));
+      item.classList.add("on");
+      t.firstChild!.textContent = item.textContent;
+      state.particles.entityCount = parseInt(item.getAttribute("data-v")!);
+      sizeSelect.classList.remove("on");
       updateDashboard();
     });
+    document.addEventListener("click", () => sizeSelect.classList.remove("on"));
   }
+
+  document.querySelectorAll("[data-bench]").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      const profile = (btn as HTMLElement).getAttribute("data-bench") as BenchmarkProfile;
+      const forceWebGL2 = (btn as HTMLElement).hasAttribute("data-webgl2");
+      startBenchmark(forceWebGL2, profile);
+    });
+  });
 
   const setupFileUpload = (id: string) => {
     const input = document.getElementById(id) as HTMLInputElement;

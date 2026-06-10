@@ -254,23 +254,63 @@
                 line-height: 1.35;
             }
 
-            .select-input {
+            .psel {
+                position: relative;
+                min-width: 150px;
+                cursor: pointer;
+                user-select: none;
+                outline: none;
+            }
+            .psel-t {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: 4px;
                 background: #0d0d12;
                 border: 2px solid var(--panel-border);
                 color: var(--text-main);
                 padding: 6px 12px;
                 font-family: var(--font-body);
-                outline: none;
-                cursor: pointer;
-                min-width: 150px;
+                min-height: 24px;
+                font-size: 0.6rem;
             }
-
-            .select-input:focus {
+            .psel:focus .psel-t {
                 border-color: var(--primary);
+            }
+            .psel-t svg {
+                flex-shrink: 0;
+            }
+            .psel-d {
+                display: none;
+                position: absolute;
+                top: 100%;
+                left: 0;
+                right: 0;
+                background: #16161e;
+                border: 2px solid var(--panel-border);
+                border-top: none;
+                z-index: 20;
+            }
+            .psel.on .psel-d {
+                display: block;
+            }
+            .psel-d div {
+                padding: 6px 12px;
+                color: var(--text-muted);
+                font-family: var(--font-body);
+                font-size: 0.6rem;
+            }
+            .psel-d div:hover {
+                background: #1e1e2e;
+                color: var(--text-main);
+            }
+            .psel-d div.on {
+                color: var(--primary);
+                background: #1a1b26;
             }
 
             .sub-tab-btn,
-            .select-input {
+            .psel-t {
                 min-height: 24px;
                 font-size: 0.6rem;
             }
@@ -318,8 +358,7 @@
             .btn,
             .tab-btn,
             .sub-tab-btn,
-            .select-input {
-                transition: none;
+            .psel-t {
                 text-transform: uppercase;
                 letter-spacing: 0;
             }
@@ -1069,10 +1108,7 @@
         </section>
         <aside class="button-sidebar panel">
             <div class="controls-panel">
-                <button
-                    class="btn btn-secondary"
-                    onclick="runAutomation(false, 'smoke')"
-                >
+                <button class="btn btn-secondary" data-bench="smoke">
                     <span class="btn-icon"
                         ><svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -1090,7 +1126,8 @@
                 </button>
                 <button
                     class="btn btn-primary"
-                    onclick="runAutomation(false, 'standard')"
+                    data-bench="standard"
+                    data-webgpu
                 >
                     <span class="btn-icon"
                         ><svg
@@ -1109,7 +1146,8 @@
                 </button>
                 <button
                     class="btn btn-secondary"
-                    onclick="runAutomation(true, 'standard')"
+                    data-bench="standard"
+                    data-webgl2
                 >
                     <span class="btn-icon"
                         ><svg
@@ -1126,10 +1164,7 @@
                     ></span>
                     <span class="btn-text">Standard (WebGL2)</span>
                 </button>
-                <button
-                    class="btn btn-secondary"
-                    onclick="runAutomation(false, 'full')"
-                >
+                <button class="btn btn-secondary" data-bench="full">
                     <span class="btn-icon"
                         ><svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -1267,21 +1302,36 @@
                             </button>
                         </div>
                         <div class="select-wrapper">
-                            <label for="particles-entity-select"
-                                >Entity Filter:</label
-                            >
-                            <select
-                                class="select-input"
+                            <label>Entity Filter:</label>
+                            <div
+                                class="psel"
                                 id="particles-entity-select"
+                                tabindex="0"
                             >
-                                <option value="1024">1,024 Entities</option>
-                                <option value="8192">8,192 Entities</option>
-                                <option value="16384">16,384 Entities</option>
-                                <option value="32768" selected>
+                                <div class="psel-t">
                                     32,768 Entities
-                                </option>
-                                <option value="65536">65,536 Entities</option>
-                            </select>
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        width=".7em"
+                                        height=".7em"
+                                        viewBox="0 0 512 512"
+                                    >
+                                        <path
+                                            fill="currentColor"
+                                            d="M442.2 93.1L256 279.3L69.8 93.1L0 162.9l256 256l256-256z"
+                                        />
+                                    </svg>
+                                </div>
+                                <div class="psel-d">
+                                    <div data-v="1024">1,024 Entities</div>
+                                    <div data-v="8192">8,192 Entities</div>
+                                    <div data-v="16384">16,384 Entities</div>
+                                    <div data-v="32768" class="on">
+                                        32,768 Entities
+                                    </div>
+                                    <div data-v="65536">65,536 Entities</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
